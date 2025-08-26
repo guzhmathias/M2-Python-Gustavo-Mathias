@@ -4,7 +4,13 @@ import sqlite3
 import plotly.express as px
 import plotly.io as pio
 import random
+import configuracoes_sql as config
+import configuracoes_html as configpg
 
+caminhoBanco = config.DB_PATH
+queryVerVingadores = config.consulta01
+queryGrafico1 = config.consulta02
+queryApagar = config.consulta03
 #configura o plotly para abrir os arquivos no navegador por padrão
 pio.renderers.default = "browser"
 
@@ -14,7 +20,7 @@ dfAvengers = pd.read_csv(r"C:/Users/integral/Desktop/M2 Python Gustavo/avengers.
 #outros encodings de exemplo: uft-16 , cp1252, iso8859-1
 
 #criar o banco de dados em sql e popular com os dados do csv
-conn = sqlite3.connect(r"C:/Users/integral/Desktop/M2 Python Gustavo/bancodados.db")
+conn = sqlite3.connect(caminhoBanco)
 
 #inserir as duas novas tabelas no banco de dados
 dfDrinks.to_sql("bebidas", conn, if_exists="replace", index=False)
@@ -22,93 +28,11 @@ dfAvengers.to_sql("vingadores", conn, if_exists="replace", index=False)
 conn.commit()
 conn.close()
 
-html_template = '''
-            <style>
-    body {
-        font-family: "Poppins", sans-serif;
-        background-image: linear-gradient(to right, #4facfe, #00f2fe);
-        color: #333;
-        margin: 0;
-        padding: 20px;
-    }
-    .container {
-        max-width: 900px;
-        margin: 40px auto;
-        background-color: rgba(255, 255, 255, 0.95);
-        padding: 50px;
-        border-radius: 15px;
-        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
-    }
-    h1 {
-        text-align: center;
-        color: #0d47a1;
-        font-size: 3em;
-        margin-bottom: 20px;
-        text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
-    }
-    h2 {
-        color: #1a237e;
-        border-bottom: 3px solid #00f2fe;
-        padding-bottom: 5px;
-        margin-top: 40px;
-    }
-    ul {
-        list-style-type: none;
-        padding: 0;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 20px;
-        justify-content: center;
-    }
-    li a {
-        display: block;
-        padding: 20px 25px;
-        background-color: #fff;
-        border: 2px solid #00f2fe;
-        color: #00897b;
-        text-decoration: none;
-        border-radius: 10px;
-        transition: all 0.3s ease;
-        font-weight: 600;
-        text-align: center;
-        min-width: 200px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    }
-    li a:hover {
-        background-color: #00f2fe;
-        color: #fff;
-        transform: translateY(-5px);
-        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
-    }
-</style>
-
-<div class="container">
-    <h1>Dashboard - Consumo de Álcool</h1>
-    <h2>Parte 01</h2>
-    <ul>
-        <li><a href="/grafico1">Top 10 países em consumo de álcool</a></li>
-        <li><a href="/grafico2">Média de consumo por tipo de bebida</a></li>
-        <li><a href="/grafico3">Consumo total por região</a></li>
-        <li><a href="/grafico4">Comparativo entre tipos de bebidas</a></li>
-        <li><a href="/pais?nome=Brazil">Insights por país (Brasil)</a></li>
-    </ul>
-
-    <h2>Parte 02</h2>
-    <ul>
-        <li><a href="/comparar">Comparar</a></li>
-        <li><a href="/upload_avengers">Upload CSV</a></li>
-        <li><a href="/apagar_avengers">Apagar Tabela Avengers</a></li>
-        <li><a href="/atribuir_paises_avengers">Atribuir Países</a></li>
-        <li><a href="/ver_tabela">Ver Tabela Avengers</a></li>
-        <li><a href="/consultar_avengers">Consultar detalhes do Vingador</a></li>
-        <li><a href="/avengers_vs_drinks">V.A.A (Vingadores Alcoólicos Anônimos)</a></li>
-    </ul>
-</div>
-
-'''
+html_template = configpg.pInit
 
 #iniciar o flask
 app = Flask(__name__)
+
 
 @app.route('/')
 def index():
@@ -116,13 +40,8 @@ def index():
 
 @app.route('/grafico1')
 def grafico1():
-    with sqlite3.connect(r"C:/Users/integral/Desktop/M2 Python Gustavo/bancodados.db") as conn:
-        df = pd.read_sql_query("""
-            SELECT country, total_litres_of_pure_alcohol
-            FROM bebidas
-            ORDER BY total_litres_of_pure_alcohol DESC
-            LIMIT 10                            
-                               """, conn)
+    with sqlite3.connect(caminhoBanco) as conn:
+        df = pd.read_sql_query(queryGrafico1, conn)
     figuraGrafico01 = px.bar(
         df, 
         x = "country",
@@ -134,7 +53,7 @@ def grafico1():
 #Grafico 2 - Média por tipo global
 @app.route('/grafico2')
 def grafico2():
-    with sqlite3.connect(r"C:/Users/integral/Desktop/M2 Python Gustavo/bancodados.db") as conn:
+    with sqlite3.connect(caminhoBanco) as conn:
         df = pd.read_sql_query("""
             SELECT AVG(beer_servings) AS cerveja, AVG(spirit_servings) AS destilados, AVG(wine_servings) AS vinhos FROM bebidas   
                                """, conn)
@@ -161,7 +80,7 @@ def grafico3():
         "Americas":['Brazil','USA','Canada','Argentina','Mexico']
     }
     dados = []
-    with sqlite3.connect(r"C:/Users/integral/Desktop/M2 Python Gustavo/bancodados.db") as conn:
+    with sqlite3.connect(caminhoBanco) as conn:
         # Itera sobre o dicionario de regioes onde cada chave (região) tem uma lista de paises
         for regiao, paises in regioes.items():
             # Criando a linha de placeholders para os paises dessa região no formato "pais1", "pais2", ..., "paisN".
@@ -188,7 +107,7 @@ def grafico3():
 # Gráfico 4: comparativo dos tipos de bebidas
 @app.route('/grafico4')   
 def grafico4():
-    with sqlite3.connect(r"C:/Users/integral/Desktop/M2 Python Gustavo/bancodados.db") as conn:
+    with sqlite3.connect(caminhoBanco) as conn:
         df = pd.read_sql_query("""
             SELECT beer_servings, spirit_servings, wine_servings FROM bebidas""", conn)
         medias = df.mean().reset_index()
@@ -254,7 +173,7 @@ def upload_avengers():
         if not recebido:
             return "<h3>Nenhum arquivo recebido</h3><br><a href='/upload_avengers'> Voltar </a> "
         dfAvengers = pd.read_csv(recebido, encoding='latin1')
-        conn = sqlite3.connect(r"C:/Users/integral/Desktop/M2 Python Gustavo/bancodados.db")
+        conn = sqlite3.connect(caminhoBanco)
         dfAvengers.to_sql("vingadores", conn, if_exists="replace", index=False)
         conn.commit()
         conn.close()
@@ -267,6 +186,34 @@ def upload_avengers():
             <input type="submit" value="-- Enviar --"><br>
         </form>
     '''
+
+@app.route('/ver_tabela')
+def ver_vingadores():
+    conn = sqlite3.connect(caminhoBanco)
+    try:
+        dfAvengers = pd.read_sql_query(queryVerVingadores, conn)
+    except Exception as erro:
+        conn.close()
+        return f"<h3>Erro ao consultar a tabela {str(erro)}</h3><br><a href='/'> Voltar </a>"
+    if dfAvengers.empty:
+        conn.close()
+        return f"<h3>A tabela de Vingadores não existe ou está vazia!</h3><br><a href='/'> Voltar </a>"
+    return dfAvengers.to_html(index=False) + "<br><a href='/'> Voltar </a>"
+
+@app.route('/apagar_avengers')
+def apagar_avengers():
+    conn = sqlite3.connect(caminhoBanco)
+    cursor = conn.cursor()
+    try:
+        cursor.execute(queryApagar)
+        conn.commit()
+        mensagem = "<h3>A tabela de Vingadores foi apagada com sucesso!</h3>"
+    except Exception as erro:
+        mensagem = f"<h3>Erro ao deletar a tabela {str(erro)}</h3><br><a href='/'> Voltar </a>"
+
+    return mensagem + "<br><a href='/'> Voltar </a>"
+        
+
 #iniciar o servidor 
 if __name__ == '__main__':
     app.run(debug=True)
