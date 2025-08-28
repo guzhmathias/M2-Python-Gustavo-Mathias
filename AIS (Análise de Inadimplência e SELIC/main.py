@@ -190,6 +190,128 @@ def editar_selic():
     return render_template_string(paginas.pgEditarSelic)
     
     
+@app.route(rot[6])
+def correlacao():
+    with sqlite3.connect(caminhoBd) as conn:
+        inad_df = pd.read_sql_query(" SELECT * FROM inadimplencia", conn)
+        selic_df = pd.read_sql_query(" SELECT * FROM selic", conn)
+        
+    # Juntar os dataframes de inadimplencia e selic usando a coluna de mês como chave de junção
+    merged = pd.merge(inad_df, selic_df, on='mes') 
+    
+    # Correlação de Pearson: corr(Pandas) ou correl(Numpy)
+    # Calcula o coeficiente da correlação de Pearson entre duas variáveis (Inadimplência e Selic)
+    correl = merged['inadimplencia'].corr(merged['selic_diaria'])
+    
+    # Registro das variáveis para futuramente fazer a regressão linear, onde x é a variável independente (no caso a Selic)
+    x = merged['selic_diaria']
+    # y é a variável dependente
+    y = merged['inadimplencia']
+    
+    # Cálculo do coeficiente da reta de regressão linear onde 'm' é a inclinação e 'b' é a interseção
+    m, b = np.polyfit(x, y, 1)
+    
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x = x,
+        y = y,
+        mode = 'markers',
+        name = 'Inadimplencia vs Selic',
+        marker = dict(
+            color = 'rgba(0, 123, 255, 0.8)',
+            size = 12,
+            line = dict(width = 2, color = 'white'), 
+            symbol = 'circle'),
+        hovertemplate = 'SELIC: %{x:.2f}%<br>Inadimplencia: %{y:.2f}%<extra></extra>'
+            )
+        )
+
+    # Criar outro add_trace para adicionar a linha de tendência da regressão linear
+    fig.add_trace(go.Scatter(
+        x = x, # Usa o mesmo eixo dos dados
+        y = m * x + b, # A equação da linha de tendência 
+        mode = 'lines',
+        name = 'Linha de tendência',
+        line = dict(
+            color = 'rgba(255, 53, 69, 1)',
+            width = 4,
+            dash = 'dot'
+            )
+        )
+    )
+    
+    fig.update_layout(
+        title = {
+            'text':f'<b>Correlação entre Selic e Inadimplência</b><br><span style="font-size: 16px"> Coeficiente de Correlação {correl:.2f}</span>',
+            'y':0.95, # Posição Vertical do Título (95% da Altura do Gráfico)
+            'x':0.5, # Posição Horizontal do título (50% da Altura do Gráfico)
+            'xanchor':'center', # Centraliza horizontalmente o título
+            'yanchor':'top' # Alinha o título verticalmente o título ao topo
+            },
+        xaxis_title = dict(
+            text = 'SELIC Média Mensal (%)',
+            font = dict(
+                size = 18,
+                family = 'Arial',
+                color = 'gray'
+                )
+            ),
+        yaxis_title = dict(
+            text = 'Inadimplência (%)',
+            font = dict(
+                size = 18,
+                family = 'Arial',
+                color = 'gray'
+                )
+            ),
+        xaxis = dict(
+            tickfont = dict(
+                size = 14 ,
+                family = 'Arial',
+                color = 'black',
+            ),
+            gridcolor = 'lightgray'
+            ),
+        yaxis = dict(
+            tickfont = dict(
+                size = 14 ,
+                family = 'Arial',
+                color = 'black',
+            ),
+            gridcolor = 'lightgray'
+            ),
+        font = dict(
+            family = 'Arial',
+            size = 14,
+            color = 'black'
+            ),
+        legend = dict(
+            orientation ='h', # Legenda Horizontal
+            yanchor = 'bottom', # Alinhamento vertical da legenda
+            y = 1.05, # Posição da legenda um pouco acima do gráfico
+            xanchor = 'center', # Alinhamento horizontal da legenda
+            x = 0.5, # Posição horizontal da legenda
+            bgcolor = 'rgba(0,0,0,0)', # Cor de fundo da legenda
+            borderwidth = 0, # Largura da borda da legenda
+            ),
+        margin = dict(
+            l =  60,
+            r = 60,
+            t = 120,
+            b = 60
+            ), 
+        plot_bgcolor = '#f8f9fa', # Cor de fundo do Gráfico
+        paper_bgcolor = 'white' # Cor de fundo da Área do Gráfico
+        
+    )
+    
+    # Gera o HTML do gráfico sem o código javascript necessário para o gráfico funcionar (inclusão externa)
+    graph_html = fig.to_html(full_html=False, include_plotlyjs = 'cdn')
+    
+       
+    return render_template_string(paginas.pgCorrel, grafico = graph_html)
+    
+
 if __name__ == '__main__':
     init_db()
     app.run(
@@ -197,3 +319,4 @@ if __name__ == '__main__':
         host= config.FLASK_HOST,
         port= config.FLASK_PORT  
             )
+    

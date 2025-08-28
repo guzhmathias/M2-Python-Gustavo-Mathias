@@ -434,7 +434,7 @@ pgEditarInad = ('''
 
     <form method="POST" action="/editar_inadimplencia">
         <label for="campo_mes">Mês (AAAA-MM)</label>
-        <input type="text" id="campo_mes" name="campo_mes" required>
+        <input type="text" id="campo_mes" name="campo_mes" placeholder="2025-01" required>
 
         <label for="campo_valor">Novo valor de Inadimplência</label>
         <input type="text" id="campo_valor" name="campo_valor" required>
@@ -567,7 +567,75 @@ pgEditarSelic = ('''
               ''')
 
 pgCorrel = ('''
-              
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Correlação Selic vs Inadimplência</title>
+    <style>
+        body {
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #e9f7ef, #f5f9ff);
+            color: #2c3e50;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 25px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        h1 {
+            color: #145a32;
+            margin-bottom: 25px;
+        }
+
+        .graph {
+            padding: 15px;
+            border-radius: 10px;
+            background: #f9f9f9;
+            box-shadow: inset 0 2px 6px rgba(0,0,0,0.05);
+        }
+
+        .links {
+            margin-top: 30px;
+        }
+
+        .links a {
+            display: inline-block;
+            padding: 10px 16px;
+            background: #2980b9;
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            border-radius: 8px;
+            transition: 0.3s;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+
+        .links a:hover {
+            background: #1f618d;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Correlação entre Selic e Inadimplência</h1>
+        <div class="graph">{{ grafico|safe }}</div>
+        
+        <div class="links">
+            <a href="/">Voltar</a>
+        </div>
+    </div>
+</body>
+</html>
               ''')
 
 pgGraf3D = ('''
