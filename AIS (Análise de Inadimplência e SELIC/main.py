@@ -307,11 +307,143 @@ def correlacao():
     
     # Gera o HTML do gráfico sem o código javascript necessário para o gráfico funcionar (inclusão externa)
     graph_html = fig.to_html(full_html=False, include_plotlyjs = 'cdn')
-    
        
     return render_template_string(paginas.pgCorrel, grafico = graph_html)
-    
 
+
+@app.route(rot[7])
+
+def graf3D():
+    
+    with sqlite3.connect(caminhoBd) as conn:
+        inad_df = pd.read_sql_query(" SELECT * FROM inadimplencia", conn)
+        selic_df = pd.read_sql_query(" SELECT * FROM selic", conn)
+        
+    # Mescla os dois Dataframes com base na coluna de mês ordenando do mais antigo para o mais novo
+    merged = pd.merge(inad_df, selic_df, on='mes').sort_values('mes')
+    
+    
+    merged['mes_idx'] = range(len(merged))
+    
+    # Cálculo da diferença de inadimplência em relação ao mês anterior (Primeira derivada discreta)
+    # Função fillna -> Substitui/Preenche valores NaN em uma séire ou coluna por 0
+    merged['tend_inad'] = merged['inadimplencia'].diff().fillna(0)
+    
+    # Classificar a tendência como subiu ou caiu ou estabilizou com base na variação calculada
+    trend_color = ['subiu' if x > 0 else 'caiu' if x < 0 else 'estavel' for x in merged['tend_inad']]
+    
+    # Cálculo das variações mensais (derivadas discretas) da inadimplência e da selic
+    merged['var_inad'] = merged['inadimplencia'].diff().fillna(0)
+    merged['var_selic'] = merged['selic_diaria'].diff().fillna(0)
+    
+    # Seleciona as colunas numéricas que serão usadas para agrupar os meses por similaridade
+    features = merged[['selic_diaria','inadimplencia']].copy()
+    scaler = StandardScaler() # Normaliza para padronizar as variáveis (média = 0; Desvio Padrão = 1)
+    
+    scaler_features = scaler.fit_transform(features) # Aplica a normalização
+    
+    # Executa o algoritmo do KMeans com 3 clusters (grupos) distimtos. Isso vai rotular cada mês com um número de cluster, agrupando meses similares
+    kmeans = KMeans(n_clusters=3, random_state=42, n_init=10)
+    merged['cluster'] = kmeans.fit_predict(scaler_features) # Adiciona as colunas com os clusters selecionados
+    
+    # Prepara os dados de entrada para o cálculo de uma regressão linear múltipla, a ideia é encontrar um plno que melhor se ajusta aos pontos 3D do gráfico
+    
+    x = merged[['mes_idx','selic_diaria']].values # Matriz de entrada: Tempo e selic
+    
+    y = merged['inadimplencia'].values # Vetor de saída
+    
+    # Concatena uma coluna para permitir o cálculo independente
+    a = np.c_[x, np.ones(x.shape[0])] # c_ -> Cálculo específco para os termos independentes
+    # A função toda aplica o método dos mínimos quadrados para resolver a * coef = y
+    # Resultado da função: coef[0] = a; coef[1] = b; coef[2] = c
+    coeffs, _, _, _ = np.linalg.lstsq(a, y, rcond=None)
+    
+    # Criação de uma malha de pontos 2d parar desenhar a superfície do plano de regressão
+    
+    # 30 pontos entre a menor e o maior mês
+    xi = np.linspace(
+        merged['mes_idx'].min(),merged['mes_idx'].max(), 30)
+    # 30 pontos entre a menor e a maior Taxa Selic
+    yi = np.linspace(merged['selic_diaria'].min(),merged['selic_diaria'].max(), 30)
+    
+    # Gera todas as combinações possíveis entre os valores de xi e yi
+    xi, yi = np.meshgrid(xi,yi)
+    
+    # Aplica à equação do plano para gerar os valo x (Inadimplencia)
+    zi = coeffs[0] * xi + coeffs[1] * yi + coeffs[2]
+    
+    # Criando o gráfico 3D com informações extras ao passar o mouse sobre os pontos
+    
+    # Caso queira mudar o tema da paleta de cores: https://plotly.com/python/builtin-colorscales/
+    disp = go.Scatter3d(
+        x = merged['mes_idx'],
+        y = merged['selic_diaria'],
+        z = merged['inadimplencia'],
+        mode = 'markers', # Apenas marcadores de bolinhas
+        marker = dict(
+            size = 8,
+            color = merged['cluster'],
+            colorscale = 'Blues',# Tema da paleta de cores padrão
+            opacity = 0.9  # Transparencia
+        ),
+        text = [ # Conteúdo que aparece ao passar o mouse sobre os pontos de dados
+           f'''
+            Mês: {m}
+            Inadimplência: {z:.2f}%
+            SELIC: {y:.2f}%
+            Variação da Inadimplência: {vi:.2f}%
+            Variação SELIC: {vs:.2f}%
+            Tendência: {t}
+           ''' 
+           for m, z, y, vi, vs, t in zip(
+               merged['mes'], 
+               merged['inadimplencia'],
+               merged['selic_diaria'],
+               merged['var_inad'],
+               merged['var_selic'],
+               trend_color
+            )
+        ],
+        hovertemplate='%{text}<extra><extra>'
+    )
+    
+    # Criando a superfície 3D do plano de regressão
+    surface =go.Surface(
+        # Coordenadas da grade
+        x = xi,
+        y = yi,
+        z = zi,
+        showscale = False, # Barra de cores
+        colorscale = 'dense', # Paleta de cores para o plano 
+        opacity = 0.5,
+        name = 'Plano de Regressão'
+    )
+    
+    # Juntando os dois gráficos (pontos de dados e plano de regressão) em uma única visualização 3D
+    fig = go.Figure( data = [disp, surface])
+    
+    # Formatando o Layout da cena completa em 3D
+    fig.update_layout(
+        scene = dict(
+            xaxis = dict(
+                title = 'Tempo (Meses)',
+                tickvals = merged['mes_idx'],
+                ticktext = merged['mes']
+            ),
+            yaxis = dict(title='SELIC (%)'),
+            zaxis = dict(title='Inadimplência (%)')
+        ),
+        title = 'Insights Econômicos 3D com tendências, derivadas e clusters',
+        margin = dict(l=0, r=0, t=50, b=0) ,
+        height = 800
+   )
+    
+    graph3d_html = fig.to_html(full_html = False, include_plotlyjs='cdn')
+   
+    
+    return render_template_string(paginas.pgGraf3D, grafico3d = graph3d_html) 
+
+    
 if __name__ == '__main__':
     init_db()
     app.run(

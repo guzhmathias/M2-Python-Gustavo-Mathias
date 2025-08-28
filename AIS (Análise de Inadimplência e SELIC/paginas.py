@@ -639,5 +639,83 @@ pgCorrel = ('''
               ''')
 
 pgGraf3D = ('''
-            
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Insights Econômicos</title>
+    <style>
+        body {
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #e9f7ef, #f5f9ff);
+            color: #2c3e50;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 30px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #145a32;
+            margin-bottom: 15px;
+        }
+
+        p {
+            font-size: 1.1rem;
+            color: #34495e;
+            margin-bottom: 25px;
+        }
+
+        .graph {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 10px;
+            box-shadow: inset 0 2px 6px rgba(0,0,0,0.05);
+        }
+
+        .links {
+            margin-top: 20px;
+        }
+
+        .links a {
+            display: inline-block;
+            padding: 10px 16px;
+            background: #2980b9;
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            border-radius: 8px;
+            transition: 0.3s;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+
+        .links a:hover {
+            background: #1f618d;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Gráfico 3D com Insights Econômicos</h1>
+        <p>Análise visual com clusters, tendências e plano de regressão.</p>
+
+        <div class="graph">{{ grafico3d|safe }}</div>
+
+        <div class="links">
+            <a href="/">Voltar</a>
+        </div>
+    </div>
+</body>
+</html>
+
             ''')
