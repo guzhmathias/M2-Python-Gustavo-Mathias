@@ -13,37 +13,61 @@ Data: 28/08/2025
 
 '''
 
-def interpretador(codigo):
+def interpretador(codigo, variaveis=None):
     # Quebra o código em linhas
-    linhas = codigo.split('\n')
     
     # Um dicionário para armazenar as variáveis
-    variaveis = {}
-    
+    if variaveis is None:
+        variaveis = {}
+             
+    def eval_texto(expr):
+        partes = [p.strip() for p in expr.split("+")] 
+        out = ""
+        for p in partes:
+            if len(p) >= 2 and p[0] == '"':
+                out += p[1:-1] # Trecho entre as aspas
+            else:
+                out += str(variaveis.get(p,p)) # Variável (literal se não existir)
+        return out
+        
+    linhas = codigo.split('\n')
     for linha in linhas:
         linha = linha.strip() # Remove espaços desnecessários
         
+        if not linha: # Ignora linhas vazias
+            continue
+    
         # Se for uma linha de definir -> Funções
         if linha.startswith("definir"): 
-            partes = linha[7:].strip().split(" como ") # Pega o nome da variável e o valor
-            nome = partes[0].strip()
-            valor = partes[1].strip().strip('"') # Remove as aspas duplas
-            variaveis[nome] = valor # Armazenando a variável
+            resto = linha[7:].strip()
+            if " como " not in resto:
+                print(f"Erro de sintaxe no código inserido: {linha}")
+                continue
+            nome, valor = resto.split(" como ", 1)
+            nome = nome.strip()
+            valor = valor.strip()
+            if len(valor) >= 2 and valor[0] == '"' and valor[1] == '"':
+                valor = valor[1:-1]
+            variaveis[nome] = valor
+                
         
         # Se for uma linha de mostrar -> Print
         elif linha.startswith("mostrar"):
-            conteudo = linha[7:].strip().strip('"')
-            print(conteudo)
+            conteudo = linha[7:].strip()
+            print(eval_texto(conteudo))
         
             
         # Se for uma estrutura condicional (se) -> If
         elif linha.startswith("se"):
-            condicao = linha[3:].split(" então ")[0].strip()
-            comando = linha.split(" então ")[1].strip()
+            resto = linha[3:].strip()
+            if " então " not in resto:
+                print(f"Erro de sintaxe no código inserido: {linha}")
+                continue
+            condicao, comando = resto.split(" então ", 1)
             
-            # Aqui podemos apenas checar se a condição é verdadeira ou falsa
-            if condicao == "verdadeiro":
-                interpretador(comando) #executa o comando dentro da condição
+                        # Aqui podemos apenas checar se a condição é verdadeira ou falsa
+            if condicao.strip() == "verdadeiro":
+                interpretador(comando.strip(), variaveis) # Executa o comando dentro da condição
             
         # Se for um laço "enquanto" ->  While
         elif linha.startswith("enquanto"):
@@ -59,11 +83,13 @@ def interpretador(codigo):
             print(f"Comando não foi reconhecido{linha}")
     
 
-codigo = """
+codigo = '''
+
     definir nome como "lalala"
-    mostrar "O nome é" + nome
+    mostrar "O nome é " + nome
     se verdadeiro então mostrar "Isso é verdadeiro"
     enquanto verdadeiro faça mostrar "Dentro do laço"
-    """
+    
+    '''
 
 interpretador(codigo)
