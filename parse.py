@@ -83,7 +83,8 @@ def interpretador(codigo, variaveis=None):
             print(f"Comando não foi reconhecido{linha}")
     
 
-codigo = '''
+
+codigo_base = '''
 
     definir nome como "lalala"
     mostrar "O nome é " + nome
@@ -91,5 +92,33 @@ codigo = '''
     enquanto verdadeiro faça mostrar "Dentro do laço"
     
     '''
+decisao = input(f"O que você prefere? \n[1] Usar o código base  \n[2] Incluir sua própria versão? \nCódigo base:\n{codigo_base}")
 
-interpretador(codigo)
+if decisao == "1":
+    interpretador(codigo_base)
+    
+elif decisao == "2":
+    
+    '''
+    Correção do instrutor Caio:
+    
+    linha = []
+    while True:
+        linha = input(f"Insira a linha do código, ou pressiona Enter vazio para terminar \n")
+        if not linha or linha.strip().upper() == "FIM":
+            break
+        linhas.append(linha)
+        
+    codigo_usuario = "\n".join(linhas)
+    interpretador(codigo_usuario)
+    '''
+    
+    # Minha versão:
+    variaveis = {}
+    i = int(input("Quantos códigos você deseja inserir? \n"))
+    for cont in range (i):
+        coman = input(f"Insira o {cont + 1}º comando \n")
+        interpretador(coman, variaveis)
+    
+else:
+    print("Insira um comando válido!")
