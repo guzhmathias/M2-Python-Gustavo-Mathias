@@ -92,7 +92,7 @@ def make_point_trace(df:pd.DataFrame, name:str) -> go.Scattermapbox:
     else:
     # Caso Normal: Normaliza os custos para o intervalo [0,1] e escala para variar entre 6 e 26 (20 de amplitude mais deslocamento de 6)
     # Pontos de custo baixo ~6, Pontos de custo alto ~26
-        size = (c - c_min) / (c_max - c) * 20 + 6
+        size = (c - c_min) / (c_max - c_min) * 20 + 6
     # Mesmo que os dados estejam fora da faixa de 6 a 26 ele evita sua apresentação, forçando a ficar entre o intervalo
     sizes = np.clip(size, 6, 26)
     
@@ -100,14 +100,14 @@ def make_point_trace(df:pd.DataFrame, name:str) -> go.Scattermapbox:
     # Axis=1 -> Empilha as colunas lado a lado
     custom = np.stack([df['nome'].values, df['custo'].values], axis=1)
     
-    return go.scattermapbox(
+    return go.Scattermapbox(
         lat = df['lat'],
         lon = df['lon'],
         mode = 'markers',
         marker = dict(
             size = sizes,
             color = df['custo'],
-            colorscale = "Blues",
+            colorscale = "Viridis",
             colorbar = dict(title ='Custo'), 
             ),
         name = f"{name} • Pontos",
@@ -121,9 +121,9 @@ def make_density_trace(df: pd.DataFrame, name:str) -> go.Densitymapbox:
     return go.Densitymapbox(
         lat = df['lat'],
         lon = df['lon'],
-        z = df['Custo'],
+        z = df['custo'],
         radius = 20, 
-        colorscale = "PuBu",
+        colorscale = "Inferno",
         name = f"{name} • Pontos",
         showscale= True,
         colorbar = dict(title='Custo'),
@@ -185,7 +185,7 @@ def main():
     
     fig.update_layout(
         title = "🌐 Mapa Interativo de Custos 💵 • Pontos e Mapa de Calor",
-        mapboxstyle = 'open-street-map',
+        mapbox_style = 'open-street-map',
         mapbox = dict(center=city_center(rj), zoom=10),
         margin = dict(l=10, r=10, t=50, b=10),
         updatemenus = [dict(
@@ -195,15 +195,15 @@ def main():
             y = 0.99,
             xanchor = "left",
             yanchor = "top",
-            bg_color = "white",
+            bgcolor = "white",
             bordercolor = "lightgray"
         )],
         legend = dict(
                orientation = "h",
                yanchor = "bottom",
                xanchor = "right",
-               y = 0.01,
-               x = 0.99
+               x = 0.99,
+               y = 0.01
         )
         
     )
